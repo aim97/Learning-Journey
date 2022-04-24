@@ -48,8 +48,10 @@ function convertToDataloaderResult(requestedIds, returnedItems, key = "id") {
   }
 ```
 
-tricks: 
+Tricks: 
+=======
 * you could also pass concatinated ids to access single query like this
+ex: storeId-cityId ===> rwekljhfkgndfgfdgd-mnolklvxmnzolklwke1s5d
 ```js
 citiesByStateId: dataLoaderFactory(async (ids) => {
         const stateIds = [];
