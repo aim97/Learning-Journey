@@ -77,3 +77,14 @@ citiesByStateId: dataLoaderFactory(async (ids) => {
         return convertToDataloaderResult(ids, mappedResult, "_id");
       })
 ```
+FAQ
+===
+
+### When to use DataLoader and when to use Redis ?
+
+DataLoader is primarily a means of batching requests to some data source. However, it does optionally utilize caching on a per request basis. This means, while executing the same GraphQL query, you only ever fetch a particular entity once. For example, we can call load(1) and load(2) concurrently and these will be batched into a single request to get two entities matching those ids. If another field calls load(1) later on while executing the same request, then that call will simply return the entity with ID 1 we fetched previously without making another request to our data source.
+
+DataLoader's cache is specific to an individual request. Even if two requests are processed at the same time, they will not share a cache. DataLoader's cache does not have an expiration nor a mechanism for invalidating individual cache values -- and it has no need to since the cache will be deleted once the request completes.
+
+Redis is a key-value store that's used for caching, queues, PubSub and more. We can use it to provide response caching, which would let us effectively bypass the resolver for one or more fields and use the cached value instead (until it expires or is invalidated). We can use it as a cache layer between GraphQL and the database, API or other data source -- for example, this is what RESTDataSource does. We can use it as part of a PubSub implementation when implementing subscriptions.
+
