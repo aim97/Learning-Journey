@@ -76,6 +76,57 @@ citiesByStateId: dataLoaderFactory(async (ids) => {
         }));
         return convertToDataloaderResult(ids, mappedResult, "_id");
       })
+-----------------
+### trick2: 
+```js
+// in mutation 
+await dataSources.productOptionsValues.search({
+      optionId: option._id,
+      storeId: option.storeId,
+      term: "",
+      locale: option.locale,
+    }
+
+// datasource 
+async search({ storeId, locale, term, optionId }) {
+    const options = await this.loaders.ProductOptionValuesByStoreId.load(
+      storeId
+    );
+
+    if (!options) return [];
+
+    const filteredOptions = _.orderBy(
+      options.filter(
+        (option) =>
+          option.locale === locale &&
+          option.optionId === optionId &&
+          new RegExp(`${term}`).test(option.name)
+      ),
+      ["order"],
+      ["asc"]
+    );
+
+    return filteredOptions;
+  }
+  
+  // actual dataloader
+  this.loaders = {
+      ProductOptionValuesByStoreId: dataLoaderFactory(
+        async (storeIds: string[]) => {
+          const results = await this.context.models.ProductOptionValue.find({
+            storeId: { $in: storeIds },
+          });
+          const byStoreId = _.groupBy(results, (item) => item.storeId);
+          return storeIds.map((id) =>
+            byStoreId[id] === undefined ? null : byStoreId[id]
+          );
+        }
+      ),
+    };
+  
+```
+    
+    
 ```
 FAQ
 ===
