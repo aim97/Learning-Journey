@@ -50,84 +50,88 @@ function convertToDataloaderResult(requestedIds, returnedItems, key = "id") {
 
 Tricks: 
 =======
-* you could also pass concatinated ids to access single query like this
+* you could also pass concatinated ids to access single query like this  
 ex: storeId-cityId ===> rwekljhfkgndfgfdgd-mnolklvxmnzolklwke1s5d
+
 ```js
 citiesByStateId: dataLoaderFactory(async (ids) => {
-        const stateIds = [];
-        const storeId = ids[0]?.split("-")[0];
-        ids.forEach((id) => {
-          stateIds.push(id.split("-")[1]);
-        });
-        const results = await getPaginatedResponseMongoose(
-          this.context.models.City,
-          {
-            $or: [{ storeId }, { storeId: { $exists: false } }],
-            stateId: { $in: stateIds },
-          },
-          { includeHasNext: true, includeHasPrev: true }
-        ).mongoosePagination({ first: 10000 });
+  const stateIds = [];
+  const storeId = ids[0]?.split("-")[0];
+  ids.forEach((id) => {
+    stateIds.push(id.split("-")[1]);
+  });
+  const results = await getPaginatedResponseMongoose(
+    this.context.models.City,
+    {
+      $or: [{ storeId }, { storeId: { $exists: false } }],
+      stateId: { $in: stateIds },
+    },
+    { includeHasNext: true, includeHasPrev: true }
+  ).mongoosePagination({ first: 10000 });
 
-        const groupByStateId = _.groupBy(results.nodes, "stateId");
-        const mappedResult = stateIds.map((stateId, index) => ({
-          _id: ids[index],
-          nodes: groupByStateId[stateId],
-          totalCount: groupByStateId[stateId]?.length || 0,
-        }));
-        return convertToDataloaderResult(ids, mappedResult, "_id");
-      })
+  const groupByStateId = _.groupBy(results.nodes, "stateId");
+  const mappedResult = stateIds.map((stateId, index) => ({
+    _id: ids[index],
+    nodes: groupByStateId[stateId],
+    totalCount: groupByStateId[stateId]?.length || 0,
+  }));
+  return convertToDataloaderResult(ids, mappedResult, "_id");
+})
+```
 -----------------
+
 ### trick2: 
+
+
 ```js
 // in mutation 
 await dataSources.productOptionsValues.search({
-      optionId: option._id,
-      storeId: option.storeId,
-      term: "",
-      locale: option.locale,
-    }
+  optionId: option._id,
+  storeId: option.storeId,
+  term: "",
+  locale: option.locale,
+}
 
 // datasource 
 async search({ storeId, locale, term, optionId }) {
-    const options = await this.loaders.ProductOptionValuesByStoreId.load(
-      storeId
-    );
+  const options = await this.loaders.ProductOptionValuesByStoreId.load(
+    storeId
+  );
 
-    if (!options) return [];
+  if (!options) return [];
 
-    const filteredOptions = _.orderBy(
-      options.filter(
-        (option) =>
-          option.locale === locale &&
-          option.optionId === optionId &&
-          new RegExp(`${term}`).test(option.name)
-      ),
-      ["order"],
-      ["asc"]
-    );
+  const filteredOptions = _.orderBy(
+    options.filter(
+      (option) =>
+        option.locale === locale &&
+        option.optionId === optionId &&
+        new RegExp(`${term}`).test(option.name)
+    ),
+    ["order"],
+    ["asc"]
+  );
 
-    return filteredOptions;
-  }
+  return filteredOptions;
+}
   
-  // actual dataloader
-  this.loaders = {
-      ProductOptionValuesByStoreId: dataLoaderFactory(
-        async (storeIds: string[]) => {
-          const results = await this.context.models.ProductOptionValue.find({
-            storeId: { $in: storeIds },
-          });
-          const byStoreId = _.groupBy(results, (item) => item.storeId);
-          return storeIds.map((id) =>
-            byStoreId[id] === undefined ? null : byStoreId[id]
-          );
-        }
-      ),
-    };
+// actual dataloader
+this.loaders = {
+  ProductOptionValuesByStoreId: dataLoaderFactory(
+    async (storeIds: string[]) => {
+      const results = await this.context.models.ProductOptionValue.find({
+        storeId: { $in: storeIds },
+      });
+      const byStoreId = _.groupBy(results, (item) => item.storeId);
+      return storeIds.map((id) =>
+        byStoreId[id] === undefined ? null : byStoreId[id]
+      );
+    }
+  ),
+};
   
 ```
     
-    
-```
+   
 FAQ
 ===
 
